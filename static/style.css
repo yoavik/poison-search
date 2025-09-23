@@ -42,3 +42,8 @@ mark{background: #ffea70; padding: 0 .15em; border-radius: .2em;}
 .back-home-wrap{margin:.2rem 0 1rem 0}
 .back-home{display:inline-block;padding:.45rem .8rem;border:1px solid var(--card-border);border-radius:10px;background:var(--card-bg);color:var(--fg);text-decoration:none}
 .back-home:hover{filter:brightness(1.05)}
+
+.chk-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:.25rem .75rem;margin-top:.5rem}
+.chk-item{display:flex;align-items:center;gap:.5rem;padding:.25rem .4rem;border-radius:8px}
+.chk-item:hover{background:rgba(0,0,0,.04)}
+.theme-dark .chk-item:hover{background:rgba(255,255,255,.06)}

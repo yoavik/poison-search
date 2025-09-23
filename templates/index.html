@@ -27,15 +27,27 @@
     <label>סינון לייקים מינימלי:
       <input type="number" name="min_likes" value="0" min="0">
     </label>
-    <label>סינון לפי משתמשים:
-      <select name="authors" multiple size="8">
-        {% for a in accounts %}
-        <option value="{{ a }}">@{{ a }}</option>
-        {% endfor %}
-      </select>
-      <small>(אם לא מסמנים — נחפש בכל המשתמשים)</small>
-    </label>
   </div>
+
+  <div class="card" style="margin-top:.5rem">
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:1rem">
+      <h3 style="margin:.2rem 0">סינון לפי משתמשים</h3>
+      <div>
+        <button type="button" class="btn-ghost" onclick="pm_selectAll(true)">בחר הכל</button>
+        <button type="button" class="btn-ghost" onclick="pm_selectAll(false)">נקה הכל</button>
+      </div>
+    </div>
+    <div id="authors-grid" class="chk-grid">
+      {% for a in accounts %}
+      <label class="chk-item">
+        <input type="checkbox" name="authors" value="{{ a }}">
+        <span>@{{ a }}</span>
+      </label>
+      {% endfor %}
+    </div>
+    <small>(אם לא מסמנים — נחפש בכל המשתמשים)</small>
+  </div>
+
   <details>
     <summary>חשבונות פעילים בחיפוש (תצוגה בלבד)</summary>
     <p>
@@ -46,4 +58,10 @@
   </details>
   <button type="submit">🔎 חפש</button>
 </form>
+
+<script>
+function pm_selectAll(flag){
+  document.querySelectorAll('input[name="authors"]').forEach(cb => cb.checked = !!flag);
+}
+</script>
 {% endblock %}
