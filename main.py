@@ -165,12 +165,12 @@ async def do_search(request: Request,
                     mode: str = Form("Latest"),
                     max_results: int = Form(40),
                     min_likes: int = Form(0),
-                    author: str = Form(""),
+                    authors: List[str] = Form([]),
                     auth=Depends(require_any)):
-    accounts = load_accounts()
-    use_accounts = accounts
-    if author and author in accounts:
-        use_accounts = [author]
+if authors:
+    selected = [a for a in authors if a in accounts]
+    if selected:
+        use_accounts = selected
     query = build_query(phrase, use_accounts)
     try:
         pages = max(1, int((max_results or 20) // 20))
@@ -204,7 +204,7 @@ async def do_search(request: Request,
 
 @app.post("/export", response_class=Response)
 async def export_csv(phrase: str = Form(...), mode: str = Form("Latest"), max_results: int = Form(40),
-                     min_likes: int = Form(0), author: str = Form(""), auth=Depends(require_any)):
+                     min_likes: int = Form(0), authors: List[str] = Form([]), auth=Depends(require_any)):
     accounts = load_accounts()
     use_accounts = accounts if not author else [author]
     query = build_query(phrase, use_accounts)
