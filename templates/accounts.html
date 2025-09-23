@@ -2,7 +2,6 @@
 {% block content %}
 <h2>קבוצת "מכונת הרעל"</h2>
 
-
 <h3>ניהול חשבונות</h3>
 <form method="post" action="/accounts/add" class="row card">
   <label>הוסף חשבון (ללא @):
@@ -35,7 +34,6 @@
   <textarea name="bulktext" rows="10" style="width:100%;font-family:monospace"></textarea>
   <button type="submit">💾 שמור רשימה</button>
 </form>
-{% endblock %}
 
 <hr>
 <h3>ייבוא JSON</h3>
@@ -44,3 +42,4 @@
   <input type="file" name="file" accept="application/json" required>
   <button type="submit">⬆️ ייבוא</button>
 </form>
+{% endblock %}

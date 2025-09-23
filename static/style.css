@@ -37,11 +37,8 @@ table.list td.text{white-space:pre-wrap}
 .error{white-space:pre-wrap;background:#3b1f1f;border:1px solid #854a4a;padding:1rem;border-radius:8px;color:#ffdede}
 mark{background: #ffea70; padding: 0 .15em; border-radius: .2em;}
 .topbar{display:flex;align-items:center;justify-content:space-between}
-
-
 .display-mode{display:flex;align-items:center;gap:.5rem}
 .display-mode-title{opacity:.8}
-
 .back-home-wrap{margin:.2rem 0 1rem 0}
 .back-home{display:inline-block;padding:.45rem .8rem;border:1px solid var(--card-border);border-radius:10px;background:var(--card-bg);color:var(--fg);text-decoration:none}
 .back-home:hover{filter:brightness(1.05)}
