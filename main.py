@@ -150,7 +150,8 @@ app.mount("/static", StaticFiles(directory="static"), name="static")
 templates = Jinja2Templates(directory="templates")
 
 def role_from_auth(auth) -> str:
-    return "" if isinstance(auth, str) else auth
+    # auth is '', 'ADMIN', or 'GUEST'
+    return auth if isinstance(auth, str) else ''
 
 @app.get("/", response_class=HTMLResponse)
 async def index(request: Request, auth=Depends(require_any)):
@@ -162,7 +163,7 @@ async def index(request: Request, auth=Depends(require_any)):
 async def do_search(request: Request,
                     phrase: str = Form(...),
                     mode: str = Form("Latest"),
-                    max_pages: int = Form(2),
+                    max_results: int = Form(40),
                     min_likes: int = Form(0),
                     author: str = Form(""),
                     auth=Depends(require_any)):
@@ -172,7 +173,8 @@ async def do_search(request: Request,
         use_accounts = [author]
     query = build_query(phrase, use_accounts)
     try:
-        raw = await advanced_search(query, mode=mode, max_pages=max_pages)
+        pages = max(1, int((max_results or 20) // 20))
+        raw = await advanced_search(query, mode=mode, max_pages=pages)
     except HTTPException as e:
         role = role_from_auth(auth)
         return templates.TemplateResponse("error.html", {"request": request, "title": APP_TITLE, "error": f"{e.status_code} {e.detail}", "query": query, "role": role})
@@ -186,7 +188,7 @@ async def do_search(request: Request,
             "ts": datetime.utcnow().isoformat() + "Z",
             "phrase": phrase,
             "mode": mode,
-            "max_pages": max_pages,
+            "max_results": max_results,
             "min_likes": min_likes,
             "author": author,
             "accounts_snapshot": use_accounts,
@@ -197,16 +199,17 @@ async def do_search(request: Request,
     role = role_from_auth(auth)
     return templates.TemplateResponse("results.html", {"request": request, "title": APP_TITLE, "query": query, "count": len(flat),
                                                       "items": flat, "accounts": accounts, "phrase": phrase, "mode": mode,
-                                                      "max_pages": max_pages, "min_likes": min_likes, "author": author,
+                                                      "max_results": max_results, "min_likes": min_likes, "author": author,
                                                       "role": role})
 
 @app.post("/export", response_class=Response)
-async def export_csv(phrase: str = Form(...), mode: str = Form("Latest"), max_pages: int = Form(2),
+async def export_csv(phrase: str = Form(...), mode: str = Form("Latest"), max_results: int = Form(40),
                      min_likes: int = Form(0), author: str = Form(""), auth=Depends(require_any)):
     accounts = load_accounts()
     use_accounts = accounts if not author else [author]
     query = build_query(phrase, use_accounts)
-    raw = await advanced_search(query, mode=mode, max_pages=max_pages)
+    pages = max(1, int((max_results or 20) // 20))
+    raw = await advanced_search(query, mode=mode, max_pages=pages)
     rows = [flatten(t) for t in raw]
     if min_likes:
         rows = [r for r in rows if (r.get("likeCount") or 0) >= int(min_likes)]
