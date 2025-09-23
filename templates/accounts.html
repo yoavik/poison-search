@@ -1,6 +1,9 @@
 {% extends "base.html" %}
 {% block content %}
-<h2>קבוצת "מכונת הרעל" – ניהול חשבונות</h2>
+<h2>קבוצת "מכונת הרעל"</h2>
+<p><a href="/accounts/export">⬇️ הורדת רשימת החשבונות (JSON)</a></p>
+{% if can_edit %}
+<h3>ניהול חשבונות</h3>
 <form method="post" action="/accounts/add" class="row card">
   <label>הוסף חשבון (ללא @):
     <input type="text" name="username" placeholder="haaretzcom" required>
@@ -24,8 +27,6 @@
     {% endfor %}
   </tbody>
 </table>
-{% endblock %}
-
 
 <hr>
 <h3>עריכה מרוכזת</h3>
@@ -34,3 +35,15 @@
   <textarea name="bulktext" rows="10" style="width:100%;font-family:monospace"></textarea>
   <button type="submit">💾 שמור רשימה</button>
 </form>
+{% else %}
+<p>מצב אורח: צפייה בלבד. כדי לערוך, היכנס עם משתמש אדמין.</p>
+<table class="list">
+  <thead><tr><th>שם משתמש</th></tr></thead>
+  <tbody>
+    {% for a in accounts %}
+    <tr><td>@{{ a }}</td></tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% endif %}
+{% endblock %}

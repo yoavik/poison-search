@@ -5,6 +5,8 @@
   <input type="hidden" name="phrase" value="{{ phrase }}">
   <input type="hidden" name="mode" value="{{ mode }}">
   <input type="hidden" name="max_pages" value="{{ max_pages }}">
+  <input type="hidden" name="min_likes" value="{{ min_likes }}">
+  <input type="hidden" name="author" value="{{ author }}">
   <button type="submit">⬇️ ייצוא ל‑CSV</button>
 </form>
 <p><strong>שאילתה:</strong> <code>{{ query }}</code></p>
@@ -28,7 +30,7 @@
     <tr>
       <td>{{ t.createdAt }}</td>
       <td>@{{ t.author_userName }}</td>
-      <td class="text">{{ t.text }}</td>
+      <td class="text">{{ t.text_highlight | safe }}</td>
       <td>{{ t.likeCount }}</td>
       <td>{{ t.retweetCount }}</td>
       <td>{{ t.replyCount }}</td>

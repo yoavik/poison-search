@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+{% block content %}
+<h2>היסטוריית חיפושים</h2>
+<table class="list">
+  <thead>
+    <tr>
+      <th>זמן (UTC)</th>
+      <th>ביטוי</th>
+      <th>מצב</th>
+      <th>עמודים</th>
+      <th>מינ' לייקים</th>
+      <th>מחבר מסונן</th>
+      <th>מס' תוצאות</th>
+      <th>חשבונות</th>
+    </tr>
+  </thead>
+  <tbody>
+  {% for h in items %}
+    <tr>
+      <td>{{ h.ts }}</td>
+      <td><code>{{ h.phrase }}</code></td>
+      <td>{{ h.mode }}</td>
+      <td>{{ h.max_pages }}</td>
+      <td>{{ h.min_likes }}</td>
+      <td>{% if h.author %}@{{ h.author }}{% else %}(כולם){% endif %}</td>
+      <td>{{ h.results }}</td>
+      <td>
+        {% for a in h.accounts_snapshot %}
+          <code>@{{ a }}</code>{% if not loop.last %}, {% endif %}
+        {% endfor %}
+      </td>
+    </tr>
+  {% endfor %}
+  </tbody>
+</table>
+{% endblock %}
