@@ -1,3 +1,4 @@
+
 <!doctype html>
 <html lang="he" dir="rtl" data-theme="system">
   <head>
@@ -6,7 +7,6 @@
     <title>{{ title }}</title>
     <link rel="stylesheet" href="/static/style.css">
     <script>
-      // Theme handling: 'system' | 'light' | 'dark'
       (function() {
         const saved = localStorage.getItem('pm-theme') || 'system';
         document.documentElement.setAttribute('data-theme', saved);
@@ -20,13 +20,8 @@
         window.addEventListener('DOMContentLoaded', () => {
           const btn = document.getElementById('theme-toggle');
           const label = document.getElementById('theme-label');
-          function labelFor(mode){
-            return mode === 'dark' ? '🌙 כהה' : mode === 'light' ? '☀️ בהיר' : '🖥️ מערכת';
-          }
-          function updateLabel(){
-            const mode = document.documentElement.getAttribute('data-theme') || 'system';
-            label.textContent = labelFor(mode);
-          }
+          function labelFor(mode){ return mode === 'dark' ? 'כהה' : mode === 'light' ? 'בהיר' : 'מערכת'; }
+          function updateLabel(){ const mode = document.documentElement.getAttribute('data-theme') || 'system'; label.textContent = labelFor(mode); }
           function cycle() {
             const current = document.documentElement.getAttribute('data-theme') || 'system';
             const next = current === 'system' ? 'light' : current === 'light' ? 'dark' : 'system';
@@ -49,16 +44,26 @@
     <header class="container">
       <div class="topbar">
         <h1>🧪 Poison Machine</h1>
-        <button id="theme-toggle" class="btn-ghost"><span id="theme-label"></span></button>
+        <div class="display-mode">
+          <span class="display-mode-title">מצב תצוגה:</span>
+          <button id="theme-toggle" class="btn-ghost"><span id="theme-label"></span></button>
+        </div>
       </div>
+      {% if role != "GUEST" %}
       <nav>
         <a href="/">חיפוש</a>
         {% if role == "ADMIN" or role == "" %}
           | <a href="/accounts">קבוצת "מכונת הרעל"</a> | <a href="/history">היסטוריה</a>
         {% endif %}
       </nav>
+      {% endif %}
     </header>
     <main class="container">
+      {% if not hide_home_button %}
+      <div class="back-home-wrap">
+        <a class="back-home" href="/">⟵ חזור לראשי</a>
+      </div>
+      {% endif %}
       {% block content %}{% endblock %}
     </main>
     <footer class="container small">
