@@ -9,7 +9,7 @@
       <th>מצב</th>
       <th>עמודים</th>
       <th>מינ' לייקים</th>
-      <th>משתמשים מסוננים</th>
+      <th>מחבר מסונן</th>
       <th>מס' תוצאות</th>
       <th>חשבונות</th>
     </tr>
@@ -22,7 +22,7 @@
       <td>{{ h.mode }}</td>
       <td>{{ h.max_pages }}</td>
       <td>{{ h.min_likes }}</td>
-      <td>{% if h.authors %}{% for a in h.authors %}<code>@{{ a }}</code>{% if not loop.last %}, {% endif %}{% endfor %}{% else %}(כולם){% endif %}</td>
+      <td>{% if h.author %}@{{ h.author }}{% else %}(כולם){% endif %}</td>
       <td>{{ h.results }}</td>
       <td>
         {% for a in h.accounts_snapshot %}
