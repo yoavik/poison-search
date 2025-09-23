@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+{% block content %}
+<h2>קבוצת "מכונת הרעל" – ניהול חשבונות</h2>
+<form method="post" action="/accounts/add" class="row card">
+  <label>הוסף חשבון (ללא @):
+    <input type="text" name="username" placeholder="haaretzcom" required>
+  </label>
+  <button type="submit">➕ הוסף</button>
+</form>
+
+<table class="list">
+  <thead><tr><th>שם משתמש</th><th>פעולות</th></tr></thead>
+  <tbody>
+    {% for a in accounts %}
+    <tr>
+      <td>@{{ a }}</td>
+      <td>
+        <form method="post" action="/accounts/remove" style="display:inline">
+          <input type="hidden" name="username" value="{{ a }}">
+          <button type="submit">🗑️ מחק</button>
+        </form>
+      </td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% endblock %}
+
+
+<hr>
+<h3>עריכה מרוכזת</h3>
+<form method="post" action="/accounts/bulk_save" class="card">
+  <p>הדבק כאן רשימת שמות משתמש, אחד בכל שורה (ללא @). שמירה תחליף את הרשימה הנוכחית.</p>
+  <textarea name="bulktext" rows="10" style="width:100%;font-family:monospace"></textarea>
+  <button type="submit">💾 שמור רשימה</button>
+</form>
