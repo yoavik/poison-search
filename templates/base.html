@@ -1,16 +1,61 @@
 <!doctype html>
-<html lang="he" dir="rtl">
+<html lang="he" dir="rtl" data-theme="system">
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>{{ title }}</title>
     <link rel="stylesheet" href="/static/style.css">
+    <script>
+      // Theme handling: 'system' | 'light' | 'dark'
+      (function() {
+        const saved = localStorage.getItem('pm-theme') || 'system';
+        document.documentElement.setAttribute('data-theme', saved);
+        applyTheme(saved);
+        function applyTheme(mode) {
+          const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+          const isDark = (mode === 'dark') || (mode === 'system' && prefersDark);
+          document.documentElement.classList.toggle('theme-dark', isDark);
+          document.documentElement.classList.toggle('theme-light', !isDark);
+        }
+        window.addEventListener('DOMContentLoaded', () => {
+          const btn = document.getElementById('theme-toggle');
+          const label = document.getElementById('theme-label');
+          function labelFor(mode){
+            return mode === 'dark' ? '🌙 כהה' : mode === 'light' ? '☀️ בהיר' : '🖥️ מערכת';
+          }
+          function updateLabel(){
+            const mode = document.documentElement.getAttribute('data-theme') || 'system';
+            label.textContent = labelFor(mode);
+          }
+          function cycle() {
+            const current = document.documentElement.getAttribute('data-theme') || 'system';
+            const next = current === 'system' ? 'light' : current === 'light' ? 'dark' : 'system';
+            document.documentElement.setAttribute('data-theme', next);
+            localStorage.setItem('pm-theme', next);
+            applyTheme(next);
+            updateLabel();
+          }
+          btn.addEventListener('click', cycle);
+          updateLabel();
+          window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => {
+            const mode = document.documentElement.getAttribute('data-theme') || 'system';
+            if (mode === 'system') applyTheme('system');
+          });
+        });
+      })();
+    </script>
   </head>
   <body>
     <header class="container">
-      <h1>🧪 Poison Machine</h1>
+      <div class="topbar">
+        <h1>🧪 Poison Machine</h1>
+        <button id="theme-toggle" class="btn-ghost"><span id="theme-label"></span></button>
+      </div>
       <nav>
-        <a href="/">חיפוש</a> | <a href="/accounts">קבוצת "מכונת הרעל"</a> | <a href="/history">היסטוריה</a>
+        <a href="/">חיפוש</a>
+        {% if role == "ADMIN" or role == "" %}
+          | <a href="/accounts">קבוצת "מכונת הרעל"</a> | <a href="/history">היסטוריה</a>
+        {% endif %}
       </nav>
     </header>
     <main class="container">

@@ -1,7 +1,7 @@
 import os
 import json
 from typing import List, Dict, Any
-from fastapi import FastAPI, Request, Form, HTTPException, Depends
+from fastapi import FastAPI, Request, Form, HTTPException, Depends, UploadFile, File
 from fastapi.responses import HTMLResponse, RedirectResponse, Response
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
@@ -43,7 +43,6 @@ def get_role(credentials: HTTPBasicCredentials) -> str:
     raise HTTPException(status_code=401, detail="Unauthorized", headers={"WWW-Authenticate": "Basic"})
 
 def require_any(credentials: HTTPBasicCredentials = Depends(security)) -> str:
-    # Allow ADMIN or GUEST (if configured)
     if not ADMIN_PASS and not GUEST_PASS:
         return ""  # open
     return get_role(credentials)
@@ -150,10 +149,13 @@ app = FastAPI(title=APP_TITLE)
 app.mount("/static", StaticFiles(directory="static"), name="static")
 templates = Jinja2Templates(directory="templates")
 
+def role_from_auth(auth) -> str:
+    return "" if isinstance(auth, str) else auth
+
 @app.get("/", response_class=HTMLResponse)
 async def index(request: Request, auth=Depends(require_any)):
     accounts = load_accounts()
-    role = "" if isinstance(auth, str) else auth
+    role = role_from_auth(auth)
     return templates.TemplateResponse("index.html", {"request": request, "accounts": accounts, "title": APP_TITLE, "role": role})
 
 @app.post("/search", response_class=HTMLResponse)
@@ -172,7 +174,8 @@ async def do_search(request: Request,
     try:
         raw = await advanced_search(query, mode=mode, max_pages=max_pages)
     except HTTPException as e:
-        return templates.TemplateResponse("error.html", {"request": request, "title": APP_TITLE, "error": f"{e.status_code} {e.detail}", "query": query})
+        role = role_from_auth(auth)
+        return templates.TemplateResponse("error.html", {"request": request, "title": APP_TITLE, "error": f"{e.status_code} {e.detail}", "query": query, "role": role})
     flat = [flatten(t) for t in raw]
     if min_likes and isinstance(min_likes, int):
         flat = [t for t in flat if (t.get("likeCount") or 0) >= min_likes]
@@ -191,7 +194,7 @@ async def do_search(request: Request,
         })
     except Exception:
         pass
-    role = "" if isinstance(auth, str) else auth
+    role = role_from_auth(auth)
     return templates.TemplateResponse("results.html", {"request": request, "title": APP_TITLE, "query": query, "count": len(flat),
                                                       "items": flat, "accounts": accounts, "phrase": phrase, "mode": mode,
                                                       "max_pages": max_pages, "min_likes": min_likes, "author": author,
@@ -216,12 +219,13 @@ async def export_csv(phrase: str = Form(...), mode: str = Form("Latest"), max_pa
     csv_bytes = output.getvalue().encode("utf-8")
     return Response(content=csv_bytes, media_type="text/csv; charset=utf-8", headers={"Content-Disposition": 'attachment; filename="poison_results.csv"'})
 
+# Admin-only pages (Guests cannot access even by URL)
 @app.get("/accounts", response_class=HTMLResponse)
-async def accounts_view(request: Request, auth=Depends(require_any)):
-    role = "" if isinstance(auth, str) else auth
+async def accounts_view(request: Request, auth=Depends(require_admin)):
     accounts = load_accounts()
-    can_edit = (role == "ADMIN" or role == "")
-    return templates.TemplateResponse("accounts.html", {"request": request, "title": APP_TITLE, "accounts": accounts, "can_edit": can_edit})
+    role = "ADMIN"
+    can_edit = True
+    return templates.TemplateResponse("accounts.html", {"request": request, "title": APP_TITLE, "accounts": accounts, "can_edit": can_edit, "role": role})
 
 @app.post("/accounts/add", response_class=HTMLResponse)
 async def accounts_add(request: Request, username: str = Form(...), auth=Depends(require_admin)):
@@ -245,14 +249,29 @@ async def accounts_bulk_save(request: Request, bulktext: str = Form(""), auth=De
     save_accounts(items)
     return RedirectResponse(url="/accounts", status_code=303)
 
+@app.post("/accounts/import", response_class=HTMLResponse)
+async def accounts_import(request: Request, file: UploadFile = File(...), auth=Depends(require_admin)):
+    # Expect a JSON array of usernames (with or without @)
+    try:
+        content = await file.read()
+        data = json.loads(content.decode("utf-8"))
+        if not isinstance(data, list):
+            raise ValueError("JSON must be an array of usernames")
+        items = [str(x).strip().lstrip("@") for x in data if str(x).strip()]
+        save_accounts(items)
+        return RedirectResponse(url="/accounts", status_code=303)
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"Invalid JSON: {e}")
+
 @app.get("/accounts/export", response_class=Response)
-async def accounts_export(auth=Depends(require_any)):
+async def accounts_export(auth=Depends(require_admin)):
     accounts = load_accounts()
     payload = json.dumps(accounts, ensure_ascii=False, indent=2)
     return Response(content=payload.encode("utf-8"), media_type="application/json; charset=utf-8",
                     headers={"Content-Disposition": 'attachment; filename="accounts.json"'})
 
 @app.get("/history", response_class=HTMLResponse)
-async def history_view(request: Request, auth=Depends(require_any)):
+async def history_view(request: Request, auth=Depends(require_admin)):
     items = load_history()
-    return templates.TemplateResponse("history.html", {"request": request, "title": APP_TITLE, "items": items})
+    role = "ADMIN"
+    return templates.TemplateResponse("history.html", {"request": request, "title": APP_TITLE, "items": items, "role": role})

@@ -1,8 +1,15 @@
 {% extends "base.html" %}
 {% block content %}
 <h2>קבוצת "מכונת הרעל"</h2>
-<p><a href="/accounts/export">⬇️ הורדת רשימת החשבונות (JSON)</a></p>
-{% if can_edit %}
+
+<h3>ייבוא JSON</h3>
+<form method="post" action="/accounts/import" enctype="multipart/form-data" class="card">
+  <p>בחר קובץ JSON בפורמט: <code>["user1","user2", ...]</code></p>
+  <input type="file" name="file" accept="application/json" required>
+  <button type="submit">⬆️ ייבוא</button>
+</form>
+
+<hr>
 <h3>ניהול חשבונות</h3>
 <form method="post" action="/accounts/add" class="row card">
   <label>הוסף חשבון (ללא @):
@@ -35,15 +42,4 @@
   <textarea name="bulktext" rows="10" style="width:100%;font-family:monospace"></textarea>
   <button type="submit">💾 שמור רשימה</button>
 </form>
-{% else %}
-<p>מצב אורח: צפייה בלבד. כדי לערוך, היכנס עם משתמש אדמין.</p>
-<table class="list">
-  <thead><tr><th>שם משתמש</th></tr></thead>
-  <tbody>
-    {% for a in accounts %}
-    <tr><td>@{{ a }}</td></tr>
-    {% endfor %}
-  </tbody>
-</table>
-{% endif %}
 {% endblock %}
