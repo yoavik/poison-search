@@ -6,11 +6,17 @@
   <input type="hidden" name="mode" value="{{ mode }}">
   <input type="hidden" name="max_results" value="{{ max_results }}">
   <input type="hidden" name="min_likes" value="{{ min_likes }}">
+{% for a in authors %}
+<input type="hidden" name="authors" value="{{ a }}">
+{% endfor %}
   <input type="hidden" name="author" value="{{ author }}">
   <button type="submit">⬇️ ייצוא ל‑CSV</button>
 </form>
 <p><strong>שאילתה:</strong> <code>{{ query }}</code></p>
 <p><strong>נמצאו:</strong> {{ count }} ציוצים</p>
+{% if authors and authors|length > 0 %}
+<p><strong>משתמשים מסוננים:</strong> {% for a in authors %}<code>@{{ a }}</code>{% if not loop.last %}, {% endif %}{% endfor %}</p>
+{% endif %}
 
 <table class="list">
   <thead>

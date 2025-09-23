@@ -165,12 +165,14 @@ async def do_search(request: Request,
                     mode: str = Form("Latest"),
                     max_results: int = Form(40),
                     min_likes: int = Form(0),
-                    author: str = Form(""),
+                    authors: list[str] = Form([]),
                     auth=Depends(require_any)):
     accounts = load_accounts()
     use_accounts = accounts
-    if author and author in accounts:
-        use_accounts = [author]
+    if authors:
+        selected = [a for a in authors if a in accounts]
+        if selected:
+            use_accounts = selected
     query = build_query(phrase, use_accounts)
     try:
         pages = max(1, int((max_results or 20) // 20))
@@ -190,7 +192,7 @@ async def do_search(request: Request,
             "mode": mode,
             "max_results": max_results,
             "min_likes": min_likes,
-            "author": author,
+            "author": None, "authors": use_accounts,
             "accounts_snapshot": use_accounts,
             "results": len(flat)
         })
@@ -199,14 +201,14 @@ async def do_search(request: Request,
     role = role_from_auth(auth)
     return templates.TemplateResponse("results.html", {"request": request, "title": APP_TITLE, "query": query, "count": len(flat),
                                                       "items": flat, "accounts": accounts, "phrase": phrase, "mode": mode,
-                                                      "max_results": max_results, "min_likes": min_likes, "author": author,
+                                                      "max_results": max_results, "min_likes": min_likes, "author": None, "authors": use_accounts,
                                                       "role": role})
 
 @app.post("/export", response_class=Response)
 async def export_csv(phrase: str = Form(...), mode: str = Form("Latest"), max_results: int = Form(40),
-                     min_likes: int = Form(0), author: str = Form(""), auth=Depends(require_any)):
+                     min_likes: int = Form(0), authors: list[str] = Form([]), auth=Depends(require_any)):
     accounts = load_accounts()
-    use_accounts = accounts if not author else [author]
+    use_accounts = accounts if not authors else [a for a in authors if a in accounts]
     query = build_query(phrase, use_accounts)
     pages = max(1, int((max_results or 20) // 20))
     raw = await advanced_search(query, mode=mode, max_pages=pages)
