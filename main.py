@@ -167,20 +167,45 @@ def role_from_auth(auth) -> str:
 # ---- Routes ----
 
 # Force a fresh Basic Auth prompt with unique realm to avoid cached creds
+from fastapi import Cookie
+from fastapi.security import HTTPBasic
+security_optional = HTTPBasic(auto_error=False)
+
 @app.get("/switch")
-async def switch_user(credentials=Depends(security_optional)):
-    def prompt():
-        realm = f'PoisonMachine-{int(time.time())}'
-        return Response(status_code=401,
-                        headers={"WWW-Authenticate": f'Basic realm="{realm}", charset="UTF-8"'},
-                        content=b"")
-    if credentials is None:
-        return prompt()
-    try:
-        get_role(credentials)
-        return RedirectResponse(url="/", status_code=303)
-    except HTTPException:
-        return prompt()
+async def switch_user(credentials=Depends(security_optional), pm_switch_challenged: str | None = Cookie(default=None)):
+    """
+    Robust switch flow for browsers that auto-send Authorization:
+    1) First hit: always send 401 with UNIQUE realm + set cookie 'pm_switch_challenged=1' → browser shows prompt.
+    2) Second hit (after user enters creds): if cookie present and Authorization provided → validate and redirect.
+    """
+    import time
+    def challenge():
+        realm = f'PoisonMachine-SWITCH-{int(time.time())}'
+        headers = {
+            "WWW-Authenticate": f'Basic realm="{realm}", charset="UTF-8"',
+            "Set-Cookie": "pm_switch_challenged=1; Path=/; HttpOnly; SameSite=Lax"
+        }
+        return Response(status_code=401, headers=headers, content=b"")
+
+    # If we haven't challenged yet, *force* a challenge to pop the auth dialog.
+    if not pm_switch_challenged:
+        return challenge()
+
+    # If we challenged already and now have creds, validate and redirect.
+    if credentials is not None:
+        try:
+            get_role(credentials)  # validates or raises 401
+            # Clear the cookie when we're done
+            resp = RedirectResponse(url="/", status_code=303)
+            resp.headers["Set-Cookie"] = "pm_switch_challenged=; Path=/; Expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=Lax"
+            return resp
+        except HTTPException:
+            # Wrong creds → challenge again
+            return challenge()
+
+    # Edge case: challenged but browser did not send Authorization (user pressed cancel)
+    # Re-challenge to try again
+    return challenge()
 
 @app.get("/", response_class=HTMLResponse)
 async def index(request: Request, auth=Depends(require_any)):

@@ -53,6 +53,7 @@
             {% for a in accounts %}
             <label class="chk-item">
               <input type="checkbox" name="authors" value="{{ a }}" onchange="pm_updateSummary();pm_storeAuthors();">
+              <img class="avatar avatar-sm" src="https://unavatar.io/twitter/{{ a }}" alt="" loading="lazy" onerror="this.style.display='none'">
               <span>@{{ a }}</span>
             </label>
             {% endfor %}
