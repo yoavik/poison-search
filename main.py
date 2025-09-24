@@ -230,12 +230,13 @@ async def resolve_user_info(usernames: List[str]) -> Dict[str, Dict[str, Any]]:
                     if not avatar:
                         avatar = f"https://unavatar.io/twitter/{u}"
                     if name:
-                        # Final guard: if the API returned username as name, try via a tweet author object
-if name.strip().lower() == u.lower():
+
+# Final guard: if the API returned username as name, try via a tweet author object
+if name and name.strip().lower() == u.lower():
     nm2 = await _fallback_name_via_tweet(u)
     if nm2:
         name = nm2
-cache[u] = {"name": name, "avatar": avatar}
+    cache[u] = {"name": name, "avatar": avatar}
 result[u] = cache[u]
                         continue
                 # fallback
