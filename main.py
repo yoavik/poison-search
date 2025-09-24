@@ -124,6 +124,21 @@ async def advanced_search(query: str, mode: str = "Latest", max_pages: int = 2) 
             cursor = data.get("next_cursor")
     return all_items
 
+
+async def _fallback_name_via_tweet(username: str) -> Optional[str]:
+    """Use advanced_search to fetch latest tweet from user and read author.name."""
+    try:
+        q = f'from:{username}'
+        tweets = await advanced_search(q, mode="Latest", max_pages=1)
+        for t in tweets:
+            a = (t or {}).get("author") or {}
+            nm = a.get("name")
+            if nm and nm.strip() and nm.strip().lower() != username.lower():
+                return nm.strip()
+    except Exception:
+        pass
+    return None
+
 def flatten(tweet: Dict[str, Any]) -> Dict[str, Any]:
     a = tweet.get("author", {}) or {}
     avatar = a.get("profileImageUrl") or a.get("profile_image_url") or a.get("profile_image_url_https")
@@ -215,8 +230,13 @@ async def resolve_user_info(usernames: List[str]) -> Dict[str, Dict[str, Any]]:
                     if not avatar:
                         avatar = f"https://unavatar.io/twitter/{u}"
                     if name:
-                        cache[u] = {"name": name, "avatar": avatar}
-                        result[u] = cache[u]
+                        # Final guard: if the API returned username as name, try via a tweet author object
+if name.strip().lower() == u.lower():
+    nm2 = await _fallback_name_via_tweet(u)
+    if nm2:
+        name = nm2
+cache[u] = {"name": name, "avatar": avatar}
+result[u] = cache[u]
                         continue
                 # fallback
                 result[u] = {"name": u, "avatar": f"https://unavatar.io/twitter/{u}"}
