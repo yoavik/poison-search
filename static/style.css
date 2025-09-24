@@ -94,3 +94,8 @@ mark{background: #ffea70; padding: 0 .15em; border-radius: .2em;}
 
 .chk-item .uname{margin-inline-start:.25rem}
 .chk-item .name{margin-inline-start:.25rem}
+
+
+footer .footer-links{margin-top:.5rem}
+footer .footer-links a{color:var(--link);text-decoration:none;margin-inline:.25rem}
+footer .footer-links a:hover{text-decoration:underline}

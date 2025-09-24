@@ -438,3 +438,14 @@ async def history_view(request: Request, auth=Depends(require_admin)):
     items = load_history()
     role = "ADMIN"
     return templates.TemplateResponse("history.html", {"request": request, "title": APP_TITLE, "items": items, "role": role})
+
+
+
+@app.get("/terms", response_class=HTMLResponse)
+async def terms(request: Request):
+    return templates.TemplateResponse("terms.html", {"request": request, "title": "תנאי שימוש"})
+
+@app.get("/privacy", response_class=HTMLResponse)
+async def privacy(request: Request):
+    return templates.TemplateResponse("privacy.html", {"request": request, "title": "מדיניות פרטיות"})
+
