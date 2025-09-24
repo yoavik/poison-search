@@ -275,15 +275,23 @@ async def switch_user(credentials=Depends(security_optional), pm_switch_challeng
 async def index(request: Request, auth=Depends(require_any)):
     accounts = load_accounts()
     role = role_from_auth(auth)
-    accounts_info = []
+        accounts_info: List[Dict[str, str]] = []
     try:
         info_map = await resolve_user_info(accounts)
         for u in accounts:
-            i = info_map.get(u, {"name": u, "avatar": f"https://unavatar.io/twitter/{u}"})
-            accounts_info.append({"username": u, "name": i.get("name") or u, "avatar": i.get("avatar")})
+            i = info_map.get(u, {})
+            accounts_info.append({
+                "username": u,
+                "name": i.get("name") or u,   # 👈 פה נכנס שם התצוגה האמיתי
+                "avatar": i.get("avatar") or f"https://unavatar.io/twitter/{u}",
+            })
     except Exception:
         for u in accounts:
-            accounts_info.append({"username": u, "name": u, "avatar": f"https://unavatar.io/twitter/{u}"})
+            accounts_info.append({
+                "username": u,
+                "name": u,
+                "avatar": f"https://unavatar.io/twitter/{u}",
+            })
     return templates.TemplateResponse("index.html", {"request": request, "accounts": accounts, "accounts_info": accounts_info, "title": APP_TITLE, "role": role})
 
 @app.post("/search", response_class=HTMLResponse)
