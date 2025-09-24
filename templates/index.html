@@ -54,7 +54,7 @@
           </div>
           <div class="chk-grid" style="max-height:260px;overflow:auto;padding:.25rem 0">
             {% for u in accounts_info %}
-            <label class="chk-item">
+            <label class="chk-item" data-username="{{ u.username }}">
               <input type="checkbox" name="authors" value="{{ u.username }}" onchange="pm_updateSummary();pm_storeAuthors();">
               <img class="avatar avatar-sm" src="{{ u.avatar }}" alt="" loading="lazy" onerror="this.style.display='none'">
               <span class="uname">@{{ u.username }}</span>
@@ -125,6 +125,44 @@
 
   // init
   document.addEventListener('DOMContentLoaded', ()=>{
+
+// Hydrate display names on first open
+(function(){
+  const dd = document.querySelector('.dropdown');
+  if(!dd) return;
+  let hydrated = false;
+  function doHydrate(){
+    if(hydrated) return;
+    const items = Array.from(document.querySelectorAll('.chk-item[data-username]'));
+    const usernames = items.map(el => el.getAttribute('data-username'));
+    if(!usernames.length) return;
+    fetch('/user_info_batch', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({usernames})
+    }).then(r => r.json()).then(json => {
+      const data = (json && json.data) || [];
+      data.forEach(row => {
+        const el = document.querySelector('.chk-item[data-username="'+row.username+'"]');
+        if(!el) return;
+        const nameEl = el.querySelector('.name');
+        if(nameEl && row.name){ nameEl.textContent = row.name; }
+        const img = el.querySelector('img.avatar-sm');
+        if(img && row.avatar){ img.src = row.avatar; }
+      });
+      hydrated = true;
+    }).catch(()=>{});
+  }
+  // Hook to dropdown button
+  const btn = document.querySelector('.dropdown-btn');
+  if(btn){
+    btn.addEventListener('click', doHydrate, {once:false});
+  } else {
+    // fallback: hydrate on load
+    doHydrate();
+  }
+})();
+
 
 const pre = document.getElementById('pm-preoct7');
 const until = document.getElementById('pm-until');

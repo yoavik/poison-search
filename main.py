@@ -449,3 +449,21 @@ async def terms(request: Request):
 async def privacy(request: Request):
     return templates.TemplateResponse("privacy.html", {"request": request, "title": "מדיניות פרטיות"})
 
+
+
+from fastapi import Body
+from fastapi.responses import JSONResponse
+
+@app.post("/user_info_batch")
+async def user_info_batch(payload: dict = Body(...), auth=Depends(require_any)):
+    try:
+        usernames = payload.get("usernames", [])
+        if not isinstance(usernames, list):
+            return JSONResponse({"error":"bad_request"}, status_code=400)
+        info = await resolve_user_info([str(u).lstrip("@") for u in usernames if str(u).strip()])
+        # normalize to list of objects
+        out = [{"username": u, "name": info.get(u,{}).get("name") or u, "avatar": info.get(u,{}).get("avatar") or f"https://unavatar.io/twitter/{u}"} for u in usernames]
+        return JSONResponse({"data": out})
+    except Exception as e:
+        return JSONResponse({"error":"server_error","detail":str(e)}, status_code=500)
+

@@ -1,13 +1,9 @@
 
-Poison Machine (Web) v5.1
+Poison Machine (Web) v5.2
 
-- Added legal pages:
-  * /terms — תנאי שימוש (כולל הגבלת אחריות; ללא סעיף "סמכות שיפוט").
-  * /privacy — מדיניות פרטיות (כולל הצהרה שמחרוזות החיפוש נשמרות ללא פרטים מזהים).
-- Footer now links to Terms & Privacy.
-- Everything else from v5 stays the same.
+- Fix: In the "filter by users" dropdown, the full display name is now shown (like in results).
+  Implementation: new POST /user_info_batch endpoint hydrates names/avatars on first dropdown open.
+- Privacy page: removed the parenthetical "(למשל Guest/Admin)" from the Cookies section.
+- Includes all features of v5.1.
 
-Deploy:
-1) Upload files / push to repo
-2) Render → Manual Deploy → Clear build cache and deploy
-3) Hard refresh (Cmd/Ctrl+Shift+R)
+Deploy: upload, Clear build cache on Render, hard refresh.
