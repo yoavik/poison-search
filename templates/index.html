@@ -55,11 +55,13 @@
           <div class="chk-grid" style="max-height:260px;overflow:auto;padding:.25rem 0">
             {% for u in accounts_info %}
             <label class="chk-item" data-username="{{ u.username }}">
-              <input type="checkbox" name="authors" value="{{ u.username }}" onchange="pm_updateSummary();pm_storeAuthors();">
-              <img class="avatar avatar-sm" src="{{ u.avatar }}" alt="" loading="lazy" onerror="this.style.display='none'">
-              <span class="uname">@{{ u.username }}</span>
-              <span class="name small muted">{{ u.name }}</span>
-            </label>
+  <input type="checkbox" name="authors" value="{{ u.username }}" onchange="pm_updateSummary();pm_storeAuthors();">
+  <img class="avatar avatar-sm" src="{{ u.avatar }}" alt="" loading="lazy" onerror="this.style.display='none'">
+  <div class="names-col">
+    <div class="uname">@{{ u.username }}</div>
+    <div class="name small muted">{{ u.name }}</div>
+  </div>
+</label>
             {% endfor %}
           </div>
         </div>

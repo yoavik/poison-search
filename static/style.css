@@ -99,3 +99,10 @@ mark{background: #ffea70; padding: 0 .15em; border-radius: .2em;}
 footer .footer-links{margin-top:.5rem}
 footer .footer-links a{color:var(--link);text-decoration:none;margin-inline:.25rem}
 footer .footer-links a:hover{text-decoration:underline}
+
+
+/* Stacked username/display-name in dropdown items */
+.chk-item{gap:.55rem}
+.chk-item .names-col{display:flex;flex-direction:column;min-width:0}
+.chk-item .names-col .uname,
+.chk-item .names-col .name{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
