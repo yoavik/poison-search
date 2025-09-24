@@ -236,7 +236,12 @@ if name and name.strip().lower() == u.lower():
     nm2 = await _fallback_name_via_tweet(u)
     if nm2:
         name = nm2
-    cache[u] = {"name": name, "avatar": avatar}
+    # Final guard: if the API returned username as name, try via a tweet author object
+if name and isinstance(name, str) and name.strip().lower() == u.lower():
+    nm2 = await _fallback_name_via_tweet(u)
+    if nm2:
+        name = nm2
+cache[u] = {"name": name, "avatar": avatar}
 result[u] = cache[u]
                         continue
                 # fallback
