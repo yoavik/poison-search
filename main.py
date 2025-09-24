@@ -146,14 +146,21 @@ async def advanced_search(query: str, mode: str = "Latest", max_pages: int = 2) 
 
 def flatten(tweet: Dict[str, Any]) -> Dict[str, Any]:
     a = tweet.get("author", {}) or {}
+    # Try common keys for profile image in twitterapi.io payloads
+    avatar = a.get("profileImageUrl") or a.get("profile_image_url") or a.get("profile_image_url_https")
+    username = a.get("userName")
+    if not avatar and username:
+        # Fallback to unavatar service (no API key needed)
+        avatar = f"https://unavatar.io/twitter/{username}"
     return {
         "id": tweet.get("id"),
         "url": tweet.get("url"),
         "text": tweet.get("text"),
         "createdAt": tweet.get("createdAt"),
-        "author_userName": a.get("userName"),
+        "author_userName": username,
         "author_name": a.get("name"),
         "author_id": a.get("id"),
+        "author_avatar": avatar,
         "likeCount": tweet.get("likeCount"),
         "retweetCount": tweet.get("retweetCount"),
         "replyCount": tweet.get("replyCount"),

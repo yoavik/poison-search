@@ -62,15 +62,7 @@
     </label>
   </div>
 
-  <details class="muted">
-    <summary>חשבונות פעילים בחיפוש (תצוגה בלבד)</summary>
-    <p>
-      {% for a in accounts %}
-        <code>@{{ a }}</code>{% if not loop.last %}, {% endif %}
-      {% endfor %}
-    </p>
-  </details>
-  <div class="actions">
+    <div class="actions">
     <button class="primary" type="submit">🔎 חפש</button>
   </div>
 </form>

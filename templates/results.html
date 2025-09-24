@@ -54,7 +54,15 @@
     {% for t in items %}
     <tr>
       <td>{{ t.createdAt }}</td>
-      <td>@{{ t.author_userName }}</td>
+      <td class="usercell">
+  <div class="userwrap">
+    <img class="avatar" src="{{ t.author_avatar }}" alt="" onerror="this.style.display='none'">
+    <div class="usernames">
+      <div class="uname">@{{ t.author_userName }}</div>
+      {% if t.author_name %}<div class="name small muted">{{ t.author_name }}</div>{% endif %}
+    </div>
+  </div>
+</td>
       <td class="text">{{ t.text_highlight | safe }}</td>
       <td>{{ t.likeCount }}</td>
       <td>{{ t.retweetCount }}</td>

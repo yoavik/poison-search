@@ -1,3 +1,4 @@
+
 :root{
   --bg: #f7f7fb;
   --fg: #0f1222;
@@ -77,3 +78,10 @@ mark{background: #ffea70; padding: 0 .15em; border-radius: .2em;}
 
 .label-line{display:block;margin-bottom:.35rem}
 .actions{display:flex;gap:.5rem;flex-wrap:wrap}
+
+
+/* Avatars in results */
+.usercell .userwrap{display:flex;align-items:center;gap:.6rem}
+.avatar{width:34px;height:34px;border-radius:50%;object-fit:cover;border:1px solid var(--card-border);box-shadow:var(--shadow-soft);background:#ddd}
+.uname{font-weight:600}
+.name{line-height:1.1}
