@@ -27,6 +27,30 @@ GUEST_USER = os.environ.get("POISON_GUEST_USER", "")
 GUEST_PASS = os.environ.get("POISON_GUEST_PASS", "")
 
 security = HTTPBasic()
+import time
+from fastapi.security import HTTPBasic
+
+security_optional = HTTPBasic(auto_error=False)
+
+@app.get("/switch")
+async def switch_user(credentials=Depends(security_optional)):
+    """
+    Force a fresh Basic Auth prompt with a *unique realm* to avoid the browser
+    auto-resending cached credentials. If valid creds are provided, redirect home.
+    """
+    def prompt():
+        realm = f'PoisonMachine-{int(time.time())}'
+        return Response(status_code=401,
+                        headers={"WWW-Authenticate": f'Basic realm="{realm}", charset="UTF-8"'},
+                        content=b"")
+    if credentials is None:
+        return prompt()
+    try:
+        get_role(credentials)  # validate; raises 401 if wrong
+        return RedirectResponse(url="/", status_code=303)
+    except HTTPException:
+        return prompt()
+
 
 os.makedirs(DATA_DIR, exist_ok=True)
 
@@ -160,22 +184,6 @@ def role_from_auth(auth) -> str:
     return auth if isinstance(auth, str) else ""
 
 # ----- Switch user flow -----
-@app.get("/switch")
-async def switch_user(credentials: Optional[HTTPBasicCredentials] = Depends(security)):
-    """
-    If credentials are missing/invalid -> send 401 to trigger the browser prompt.
-    If valid -> redirect to '/' under that identity.
-    """
-    try:
-        role = get_role(credentials)  # raises 401 if invalid
-        return RedirectResponse(url="/", status_code=303)
-    except HTTPException:
-        return Response(
-            status_code=401,
-            headers={"WWW-Authenticate": 'Basic realm="PoisonMachine", charset="UTF-8"'},
-            content=b""
-        )
-
 @app.get("/", response_class=HTMLResponse)
 async def index(request: Request, auth=Depends(require_any)):
     accounts = load_accounts()
