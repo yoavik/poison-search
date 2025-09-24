@@ -11,6 +11,7 @@ import csv
 import io
 import secrets
 from datetime import datetime
+import time
 
 APP_TITLE = "Poison Machine"
 DATA_DIR = os.environ.get("POISON_DATA_DIR", "./data")
@@ -20,58 +21,37 @@ API_KEY = os.environ.get("TWITTERAPI_IO_KEY", "")
 API_BASE = "https://api.twitterapi.io"
 ADV_ENDPOINT = f"{API_BASE}/twitter/tweet/advanced_search"
 
-# Roles: Admin & Guest (Basic Auth). If none set -> open access.
+# Auth setup
 ADMIN_USER = os.environ.get("POISON_ADMIN_USER", os.environ.get("POISON_USERNAME", "poison"))
 ADMIN_PASS = os.environ.get("POISON_ADMIN_PASS", os.environ.get("POISON_PASSWORD", ""))
 GUEST_USER = os.environ.get("POISON_GUEST_USER", "")
 GUEST_PASS = os.environ.get("POISON_GUEST_PASS", "")
 
 security = HTTPBasic()
-import time
-from fastapi.security import HTTPBasic
-
 security_optional = HTTPBasic(auto_error=False)
-
-@app.get("/switch")
-async def switch_user(credentials=Depends(security_optional)):
-    """
-    Force a fresh Basic Auth prompt with a *unique realm* to avoid the browser
-    auto-resending cached credentials. If valid creds are provided, redirect home.
-    """
-    def prompt():
-        realm = f'PoisonMachine-{int(time.time())}'
-        return Response(status_code=401,
-                        headers={"WWW-Authenticate": f'Basic realm="{realm}", charset="UTF-8"'},
-                        content=b"")
-    if credentials is None:
-        return prompt()
-    try:
-        get_role(credentials)  # validate; raises 401 if wrong
-        return RedirectResponse(url="/", status_code=303)
-    except HTTPException:
-        return prompt()
-
 
 os.makedirs(DATA_DIR, exist_ok=True)
 
-DEFAULT_ACCOUNTS = ["nytimes", "BBCWorld"]  # change via UI
+DEFAULT_ACCOUNTS = ["nytimes", "BBCWorld"]
 
+# ---- FastAPI app MUST be created before routes ----
+app = FastAPI(title=APP_TITLE)
+app.mount("/static", StaticFiles(directory="static"), name="static")
+templates = Jinja2Templates(directory="templates")
+
+# ---- Helpers ----
 def get_role(credentials: HTTPBasicCredentials) -> str:
-    # Return "ADMIN" / "GUEST" / "" (no auth configured)
     if not ADMIN_PASS and not GUEST_PASS:
-        return ""  # auth disabled
-    # compare_digest prevents timing attacks
+        return ""
     if ADMIN_PASS and secrets.compare_digest(credentials.username, ADMIN_USER) and secrets.compare_digest(credentials.password, ADMIN_PASS):
         return "ADMIN"
     if GUEST_PASS and secrets.compare_digest(credentials.username, GUEST_USER) and secrets.compare_digest(credentials.password, GUEST_PASS):
         return "GUEST"
     raise HTTPException(status_code=401, detail="Unauthorized", headers={"WWW-Authenticate": 'Basic realm="PoisonMachine"'})
-
 def require_any(credentials: HTTPBasicCredentials = Depends(security)) -> str:
     if not ADMIN_PASS and not GUEST_PASS:
-        return ""  # open
+        return ""
     return get_role(credentials)
-
 def require_admin(credentials: HTTPBasicCredentials = Depends(security)) -> str:
     role = get_role(credentials)
     if role != "ADMIN":
@@ -104,7 +84,7 @@ def load_history() -> List[Dict[str, Any]]:
 
 def append_history(entry: Dict[str, Any]) -> None:
     items = load_history()
-    items.insert(0, entry)  # newest first
+    items.insert(0, entry)
     items = items[:200]
     with open(HISTORY_PATH, "w", encoding="utf-8") as f:
         json.dump(items, f, ensure_ascii=False, indent=2)
@@ -146,11 +126,9 @@ async def advanced_search(query: str, mode: str = "Latest", max_pages: int = 2) 
 
 def flatten(tweet: Dict[str, Any]) -> Dict[str, Any]:
     a = tweet.get("author", {}) or {}
-    # Try common keys for profile image in twitterapi.io payloads
     avatar = a.get("profileImageUrl") or a.get("profile_image_url") or a.get("profile_image_url_https")
     username = a.get("userName")
     if not avatar and username:
-        # Fallback to unavatar service (no API key needed)
         avatar = f"https://unavatar.io/twitter/{username}"
     return {
         "id": tweet.get("id"),
@@ -183,14 +161,27 @@ def highlight_text(text: str, phrase: str) -> str:
     except Exception:
         return text
 
-app = FastAPI(title=APP_TITLE)
-app.mount("/static", StaticFiles(directory="static"), name="static")
-templates = Jinja2Templates(directory="templates")
-
 def role_from_auth(auth) -> str:
     return auth if isinstance(auth, str) else ""
 
-# ----- Switch user flow -----
+# ---- Routes ----
+
+# Force a fresh Basic Auth prompt with unique realm to avoid cached creds
+@app.get("/switch")
+async def switch_user(credentials=Depends(security_optional)):
+    def prompt():
+        realm = f'PoisonMachine-{int(time.time())}'
+        return Response(status_code=401,
+                        headers={"WWW-Authenticate": f'Basic realm="{realm}", charset="UTF-8"'},
+                        content=b"")
+    if credentials is None:
+        return prompt()
+    try:
+        get_role(credentials)
+        return RedirectResponse(url="/", status_code=303)
+    except HTTPException:
+        return prompt()
+
 @app.get("/", response_class=HTMLResponse)
 async def index(request: Request, auth=Depends(require_any)):
     accounts = load_accounts()
@@ -291,7 +282,7 @@ async def export_xlsx(phrase: str = Form(...), mode: str = Form("Latest"), max_r
     return Response(content=bio.read(), media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
                     headers={"Content-Disposition": 'attachment; filename="poison_results.xlsx"'})
 
-# ----- Admin-only pages -----
+# Admin routes
 @app.get("/accounts", response_class=HTMLResponse)
 async def accounts_view(request: Request, auth=Depends(require_admin)):
     accounts = load_accounts()
