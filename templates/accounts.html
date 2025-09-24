@@ -1,16 +1,16 @@
 {% extends "base.html" %}
 {% block content %}
-<h2>קבוצת "מכונת הרעל"</h2>
+<h2 class="page-title">קבוצת "מכונת הרעל"</h2>
 
 <h3>ניהול חשבונות</h3>
 <form method="post" action="/accounts/add" class="row card">
   <label>הוסף חשבון (ללא @):
     <input type="text" name="username" placeholder="haaretzcom" required>
   </label>
-  <button type="submit">➕ הוסף</button>
+  <button type="submit" class="primary">➕ הוסף</button>
 </form>
 
-<table class="list">
+<table class="list elevate">
   <thead><tr><th>שם משתמש</th><th>פעולות</th></tr></thead>
   <tbody>
     {% for a in accounts %}
@@ -32,7 +32,7 @@
 <form method="post" action="/accounts/bulk_save" class="card">
   <p>הדבק כאן רשימת שמות משתמש, אחד בכל שורה (ללא @). שמירה תחליף את הרשימה הנוכחית.</p>
   <textarea name="bulktext" rows="10" style="width:100%;font-family:monospace"></textarea>
-  <button type="submit">💾 שמור רשימה</button>
+  <div class="actions"><button type="submit" class="primary">💾 שמור רשימה</button></div>
 </form>
 
 <hr>
@@ -40,6 +40,6 @@
 <form method="post" action="/accounts/import" enctype="multipart/form-data" class="card">
   <p>בחר קובץ JSON בפורמט: <code>["user1","user2", ...]</code></p>
   <input type="file" name="file" accept="application/json" required>
-  <button type="submit">⬆️ ייבוא</button>
+  <div class="actions"><button type="submit">⬆️ ייבוא</button></div>
 </form>
 {% endblock %}

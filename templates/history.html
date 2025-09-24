@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 {% block content %}
-<h2>היסטוריית חיפושים</h2>
-<table class="list">
+<h2 class="page-title">היסטוריית חיפושים</h2>
+<table class="list elevate">
   <thead>
     <tr>
       <th>זמן (UTC)</th>
@@ -9,9 +9,9 @@
       <th>מצב</th>
       <th>תוצאות מקס'</th>
       <th>מינ' לייקים</th>
+      <th>טווח תאריכים</th>
       <th>משתמשים מסוננים</th>
       <th>מס' תוצאות</th>
-      <th>חשבונות</th>
     </tr>
   </thead>
   <tbody>
@@ -22,13 +22,16 @@
       <td>{{ h.mode }}</td>
       <td>{{ h.max_results }}</td>
       <td>{{ h.min_likes }}</td>
+      <td>
+        {% if h.since_date or h.until_date %}
+          {% if h.since_date %}מ־{{ h.since_date }}{% endif %}
+          {% if h.until_date %} עד {{ h.until_date }}{% endif %}
+        {% else %}
+          (ללא)
+        {% endif %}
+      </td>
       <td>{% if h.authors %}{% for a in h.authors %}<code>@{{ a }}</code>{% if not loop.last %}, {% endif %}{% endfor %}{% else %}(כולם){% endif %}</td>
       <td>{{ h.results }}</td>
-      <td>
-        {% for a in h.accounts_snapshot %}
-          <code>@{{ a }}</code>{% if not loop.last %}, {% endif %}
-        {% endfor %}
-      </td>
     </tr>
   {% endfor %}
   </tbody>

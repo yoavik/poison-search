@@ -41,21 +41,27 @@
   </head>
   <body>
     <header class="container">
-      <div class="topbar">
-        <h1>🧪 Poison Machine</h1>
-        <div class="display-mode">
-          <span class="display-mode-title">מצב תצוגה:</span>
-          <button id="theme-toggle" class="btn-ghost"><span id="theme-label"></span></button>
+      <div class="topbar card soft">
+        <div class="left">
+          <h1>🧪 Poison Machine</h1>
+          <nav class="inline">
+            {% if role != "GUEST" %}
+              <a href="/">חיפוש</a>
+              {% if role == "ADMIN" or role == "" %}
+                <span class="sep">•</span><a href="/accounts">קבוצת "מכונת הרעל"</a>
+                <span class="sep">•</span><a href="/history">היסטוריה</a>
+              {% endif %}
+            {% endif %}
+          </nav>
+        </div>
+        <div class="right controls">
+          <a class="btn-ghost" href="/switch" title="החלפת משתמש">החלפת משתמש</a>
+          <div class="display-mode">
+            <span class="display-mode-title">מצב תצוגה:</span>
+            <button id="theme-toggle" class="btn-ghost"><span id="theme-label"></span></button>
+          </div>
         </div>
       </div>
-      {% if role != "GUEST" %}
-      <nav>
-        <a href="/">חיפוש</a>
-        {% if role == "ADMIN" or role == "" %}
-          | <a href="/accounts">קבוצת "מכונת הרעל"</a> | <a href="/history">היסטוריה</a>
-        {% endif %}
-      </nav>
-      {% endif %}
     </header>
     <main class="container">
       {% if not hide_home_button %}
@@ -65,7 +71,7 @@
       {% endif %}
       {% block content %}{% endblock %}
     </main>
-    <footer class="container small">
+    <footer class="container small muted">
       <hr>
       <p>עובד מול <code>twitterapi.io</code>. ודא שמשתני הסביבה מוגדרים (TWITTERAPI_IO_KEY, ועוד).</p>
     </footer>

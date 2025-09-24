@@ -1,8 +1,8 @@
 import os
 import json
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Optional
 from fastapi import FastAPI, Request, Form, HTTPException, Depends, UploadFile, File
-from fastapi.responses import HTMLResponse, RedirectResponse, Response
+from fastapi.responses import HTMLResponse, RedirectResponse, Response, PlainTextResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from fastapi.security import HTTPBasic, HTTPBasicCredentials
@@ -84,12 +84,19 @@ def append_history(entry: Dict[str, Any]) -> None:
     with open(HISTORY_PATH, "w", encoding="utf-8") as f:
         json.dump(items, f, ensure_ascii=False, indent=2)
 
-def build_query(phrase: str, accounts: List[str]) -> str:
+def build_query(phrase: str, accounts: List[str], since_date: Optional[str], until_date: Optional[str]) -> str:
     phrase = phrase.strip()
     if not (phrase.startswith('"') and phrase.endswith('"')):
         phrase = f'"{phrase}"'
     acct_part = " OR ".join([f"from:{u}" for u in accounts]) if accounts else ""
-    return f'{phrase} ({acct_part})' if acct_part else phrase
+    date_part = ""
+    # Twitter search operators: since:YYYY-MM-DD until:YYYY-MM-DD
+    if since_date:
+        date_part += f" since:{since_date}"
+    if until_date:
+        date_part += f" until:{until_date}"
+    base = f'{phrase} ({acct_part})' if acct_part else phrase
+    return (base + date_part).strip()
 
 async def advanced_search(query: str, mode: str = "Latest", max_pages: int = 2) -> List[Dict[str, Any]]:
     if not API_KEY:
@@ -153,6 +160,11 @@ def role_from_auth(auth) -> str:
     # auth is '', 'ADMIN', or 'GUEST'
     return auth if isinstance(auth, str) else ""
 
+@app.get("/switch", response_class=HTMLResponse)
+async def switch_user():
+    # Force the browser to prompt for credentials again (switch user)
+    return Response(status_code=401, headers={"WWW-Authenticate": "Basic realm=PoisonMachine"}, content="")
+
 @app.get("/", response_class=HTMLResponse)
 async def index(request: Request, auth=Depends(require_any)):
     accounts = load_accounts()
@@ -165,6 +177,8 @@ async def do_search(request: Request,
                     mode: str = Form("Latest"),
                     max_results: int = Form(40),
                     min_likes: int = Form(0),
+                    since_date: Optional[str] = Form(None),
+                    until_date: Optional[str] = Form(None),
                     authors: List[str] = Form([]),
                     auth=Depends(require_any)):
     accounts = load_accounts()
@@ -173,7 +187,7 @@ async def do_search(request: Request,
         selected = [a for a in authors if a in accounts]
         if selected:
             use_accounts = selected
-    query = build_query(phrase, use_accounts)
+    query = build_query(phrase, use_accounts, since_date, until_date)
     try:
         pages = max(1, int((max_results or 20) // 20))
         raw = await advanced_search(query, mode=mode, max_pages=pages)
@@ -193,6 +207,8 @@ async def do_search(request: Request,
             "max_results": max_results,
             "min_likes": min_likes,
             "authors": use_accounts,
+            "since_date": since_date,
+            "until_date": until_date,
             "accounts_snapshot": use_accounts,
             "results": len(flat)
         })
@@ -202,19 +218,28 @@ async def do_search(request: Request,
     return templates.TemplateResponse("results.html", {"request": request, "title": APP_TITLE, "query": query, "count": len(flat),
                                                       "items": flat, "accounts": accounts, "phrase": phrase, "mode": mode,
                                                       "max_results": max_results, "min_likes": min_likes, "authors": use_accounts,
-                                                      "role": role})
+                                                      "since_date": since_date, "until_date": until_date, "role": role})
+
+def _collect_rows_for_export(phrase: str, mode: str, max_results: int, min_likes: int, authors: List[str]):
+    # helper used by export endpoints (we let browser handle file download)
+    accounts = load_accounts()
+    use_accounts = accounts if not authors else [a for a in authors if a in accounts]
+    # When exporting we don't re-apply date range to keep it simple; could be added similarly.
+    query = build_query(phrase, use_accounts, None, None)
+    pages = max(1, int((max_results or 20) // 20))
+    import anyio
+    async def _get():
+        return await advanced_search(query, mode=mode, max_pages=pages)
+    rows = anyio.run(_get)
+    flat = [flatten(t) for t in rows]
+    if min_likes:
+        flat = [r for r in flat if (r.get("likeCount") or 0) >= int(min_likes)]
+    return flat
 
 @app.post("/export", response_class=Response)
 async def export_csv(phrase: str = Form(...), mode: str = Form("Latest"), max_results: int = Form(40),
                      min_likes: int = Form(0), authors: List[str] = Form([]), auth=Depends(require_any)):
-    accounts = load_accounts()
-    use_accounts = accounts if not authors else [a for a in authors if a in accounts]
-    query = build_query(phrase, use_accounts)
-    pages = max(1, int((max_results or 20) // 20))
-    raw = await advanced_search(query, mode=mode, max_pages=pages)
-    rows = [flatten(t) for t in raw]
-    if min_likes:
-        rows = [r for r in rows if (r.get("likeCount") or 0) >= int(min_likes)]
+    rows = _collect_rows_for_export(phrase, mode, max_results, min_likes, authors)
     output = io.StringIO()
     fieldnames = list(rows[0].keys()) if rows else ["id","url","text","createdAt","author_userName","author_name","author_id","likeCount","retweetCount","replyCount","quoteCount","viewCount","lang"]
     writer = csv.DictWriter(output, fieldnames=fieldnames)
@@ -224,58 +249,20 @@ async def export_csv(phrase: str = Form(...), mode: str = Form("Latest"), max_re
     csv_bytes = output.getvalue().encode("utf-8")
     return Response(content=csv_bytes, media_type="text/csv; charset=utf-8", headers={"Content-Disposition": 'attachment; filename="poison_results.csv"'})
 
-# Admin-only pages (Guests cannot access even by URL)
-@app.get("/accounts", response_class=HTMLResponse)
-async def accounts_view(request: Request, auth=Depends(require_admin)):
-    accounts = load_accounts()
-    role = "ADMIN"
-    can_edit = True
-    return templates.TemplateResponse("accounts.html", {"request": request, "title": APP_TITLE, "accounts": accounts, "can_edit": can_edit, "role": role})
-
-@app.post("/accounts/add", response_class=HTMLResponse)
-async def accounts_add(request: Request, username: str = Form(...), auth=Depends(require_admin)):
-    username = username.strip().lstrip("@")
-    accounts = load_accounts()
-    if username and username not in accounts:
-        accounts.append(username)
-        save_accounts(accounts)
-    return RedirectResponse(url="/accounts", status_code=303)
-
-@app.post("/accounts/remove", response_class=HTMLResponse)
-async def accounts_remove(request: Request, username: str = Form(...), auth=Depends(require_admin)):
-    username = username.strip().lstrip("@")
-    accounts = [a for a in load_accounts() if a.lower() != username.lower()]
-    save_accounts(accounts)
-    return RedirectResponse(url="/accounts", status_code=303)
-
-@app.post("/accounts/bulk_save", response_class=HTMLResponse)
-async def accounts_bulk_save(request: Request, bulktext: str = Form(""), auth=Depends(require_admin)):
-    items = [line.strip().lstrip("@") for line in bulktext.splitlines() if line.strip()]
-    save_accounts(items)
-    return RedirectResponse(url="/accounts", status_code=303)
-
-@app.post("/accounts/import", response_class=HTMLResponse)
-async def accounts_import(request: Request, file: UploadFile = File(...), auth=Depends(require_admin)):
-    try:
-        content = await file.read()
-        data = json.loads(content.decode("utf-8"))
-        if not isinstance(data, list):
-            raise ValueError("JSON must be an array of usernames")
-        items = [str(x).strip().lstrip("@") for x in data if str(x).strip()]
-        save_accounts(items)
-        return RedirectResponse(url="/accounts", status_code=303)
-    except Exception as e:
-        raise HTTPException(status_code=400, detail=f"Invalid JSON: {e}")
-
-@app.get("/accounts/export", response_class=Response)
-async def accounts_export(auth=Depends(require_admin)):
-    accounts = load_accounts()
-    payload = json.dumps(accounts, ensure_ascii=False, indent=2)
-    return Response(content=payload.encode("utf-8"), media_type="application/json; charset=utf-8",
-                    headers={"Content-Disposition": 'attachment; filename="accounts.json"'})
-
-@app.get("/history", response_class=HTMLResponse)
-async def history_view(request: Request, auth=Depends(require_admin)):
-    items = load_history()
-    role = "ADMIN"
-    return templates.TemplateResponse("history.html", {"request": request, "title": APP_TITLE, "items": items, "role": role})
+@app.post("/export_xlsx", response_class=Response)
+async def export_xlsx(phrase: str = Form(...), mode: str = Form("Latest"), max_results: int = Form(40),
+                      min_likes: int = Form(0), authors: List[str] = Form([]), auth=Depends(require_any)):
+    rows = _collect_rows_for_export(phrase, mode, max_results, min_likes, authors)
+    from openpyxl import Workbook
+    wb = Workbook()
+    ws = wb.active
+    ws.title = "Results"
+    headers = list(rows[0].keys()) if rows else ["id","url","text","createdAt","author_userName","author_name","author_id","likeCount","retweetCount","replyCount","quoteCount","viewCount","lang"]
+    ws.append(headers)
+    for r in rows:
+        ws.append([r.get(h) for h in headers])
+    bio = io.BytesIO()
+    wb.save(bio)
+    bio.seek(0)
+    return Response(content=bio.read(), media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                    headers={"Content-Disposition": 'attachment; filename="poison_results.xlsx"'})

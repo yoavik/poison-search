@@ -1,23 +1,43 @@
 {% extends "base.html" %}
 {% block content %}
-<h2>תוצאות חיפוש</h2>
-<form method="post" action="/export" class="card" style="display:flex;gap:.5rem;align-items:center">
-  <input type="hidden" name="phrase" value="{{ phrase }}">
-  <input type="hidden" name="mode" value="{{ mode }}">
-  <input type="hidden" name="max_results" value="{{ max_results }}">
-  <input type="hidden" name="min_likes" value="{{ min_likes }}">
-  {% for a in authors %}
-  <input type="hidden" name="authors" value="{{ a }}">
-  {% endfor %}
-  <button type="submit">⬇️ ייצוא ל‑CSV</button>
-</form>
-<p><strong>שאילתה:</strong> <code>{{ query }}</code></p>
-<p><strong>נמצאו:</strong> {{ count }} ציוצים</p>
+<h2 class="page-title">תוצאות חיפוש</h2>
+<div class="card elevate">
+  <div class="row" style="align-items:center">
+    <div>
+      <div><strong>שאילתה:</strong> <code>{{ query }}</code></div>
+      <div class="small muted">
+        מצב: {{ mode }} | תוצאות מקסימליות: {{ max_results }} | מינ' לייקים: {{ min_likes }}
+        {% if since_date %}| מתאריך: {{ since_date }}{% endif %}
+        {% if until_date %}| עד תאריך: {{ until_date }}{% endif %}
+      </div>
+    </div>
+    <div class="actions" style="margin-left:auto">
+      <form method="post" action="/export" style="display:inline">
+        <input type="hidden" name="phrase" value="{{ phrase }}">
+        <input type="hidden" name="mode" value="{{ mode }}">
+        <input type="hidden" name="max_results" value="{{ max_results }}">
+        <input type="hidden" name="min_likes" value="{{ min_likes }}">
+        {% for a in authors %}<input type="hidden" name="authors" value="{{ a }}">{% endfor %}
+        <button type="submit">⬇️ ייצוא CSV</button>
+      </form>
+      <form method="post" action="/export_xlsx" style="display:inline">
+        <input type="hidden" name="phrase" value="{{ phrase }}">
+        <input type="hidden" name="mode" value="{{ mode }}">
+        <input type="hidden" name="max_results" value="{{ max_results }}">
+        <input type="hidden" name="min_likes" value="{{ min_likes }}">
+        {% for a in authors %}<input type="hidden" name="authors" value="{{ a }}">{% endfor %}
+        <button type="submit" class="primary">⬇️ ייצוא Excel / Sheets</button>
+      </form>
+    </div>
+  </div>
+</div>
+
+<p class="small muted">נמצאו {{ count }} ציוצים.</p>
 {% if authors and authors|length > 0 %}
-<p><strong>משתמשים מסוננים:</strong> {% for a in authors %}<code>@{{ a }}</code>{% if not loop.last %}, {% endif %}{% endfor %}</p>
+<p class="small muted"><strong>משתמשים מסוננים:</strong> {% for a in authors %}<code>@{{ a }}</code>{% if not loop.last %}, {% endif %}{% endfor %}</p>
 {% endif %}
 
-<table class="list">
+<table class="list elevate">
   <thead>
     <tr>
       <th>זמן</th>
