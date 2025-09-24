@@ -34,6 +34,9 @@
       <input id="pm-until" type="date" name="until_date">
     </label>
   </div>
+  <div class="row">
+    <label style="align-items:center;display:flex;gap:.5rem"><input type="checkbox" name="pre_oct7" id="pm-preoct7"> רק ציוצים מלפני 7 באוקטובר 2023</label>
+  </div>
 
   <div class="row">
     <label style="flex:1">
@@ -50,11 +53,12 @@
             <button type="button" class="btn-ghost" onclick="pm_selectAll(false)">נקה הכל</button>
           </div>
           <div class="chk-grid" style="max-height:260px;overflow:auto;padding:.25rem 0">
-            {% for a in accounts %}
+            {% for u in accounts_info %}
             <label class="chk-item">
-              <input type="checkbox" name="authors" value="{{ a }}" onchange="pm_updateSummary();pm_storeAuthors();">
-              <img class="avatar avatar-sm" src="https://unavatar.io/twitter/{{ a }}" alt="" loading="lazy" onerror="this.style.display='none'">
-              <span>@{{ a }}</span>
+              <input type="checkbox" name="authors" value="{{ u.username }}" onchange="pm_updateSummary();pm_storeAuthors();">
+              <img class="avatar avatar-sm" src="{{ u.avatar }}" alt="" loading="lazy" onerror="this.style.display='none'">
+              <span class="uname">@{{ u.username }}</span>
+              <span class="name small muted">{{ u.name }}</span>
             </label>
             {% endfor %}
           </div>
@@ -121,6 +125,26 @@
 
   // init
   document.addEventListener('DOMContentLoaded', ()=>{
+
+const pre = document.getElementById('pm-preoct7');
+const until = document.getElementById('pm-until');
+const LS_PRE = 'pm-preoct7';
+function syncPre(){
+  if (pre.checked){
+    if (until){ until.value = '2023-10-07'; until.disabled = true; }
+    localStorage.setItem(LS_PRE, '1');
+  } else {
+    if (until){ until.disabled = false; }
+    localStorage.removeItem(LS_PRE);
+  }
+}
+pre.addEventListener('change', syncPre);
+// restore
+if (localStorage.getItem(LS_PRE) === '1'){
+  pre.checked = true;
+  syncPre();
+}
+
     restoreAuthors();
     restoreDate('pm-since', LS_SINCE);
     restoreDate('pm-until', LS_UNTIL);

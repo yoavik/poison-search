@@ -90,3 +90,7 @@ mark{background: #ffea70; padding: 0 .15em; border-radius: .2em;}
 /* Small avatars inside dropdown checkbox list */
 .avatar-sm{width:22px;height:22px;border-radius:50%;object-fit:cover;border:1px solid var(--card-border);background:#ddd}
 .chk-item .avatar-sm{margin-inline-start:.1rem}
+
+
+.chk-item .uname{margin-inline-start:.25rem}
+.chk-item .name{margin-inline-start:.25rem}

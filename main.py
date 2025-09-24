@@ -164,6 +164,70 @@ def highlight_text(text: str, phrase: str) -> str:
 def role_from_auth(auth) -> str:
     return auth if isinstance(auth, str) else ""
 
+USER_CACHE_PATH = os.path.join(DATA_DIR, "user_cache.json")
+
+def load_user_cache() -> Dict[str, Dict[str, Any]]:
+    if not os.path.exists(USER_CACHE_PATH):
+        return {}
+    try:
+        with open(USER_CACHE_PATH, "r", encoding="utf-8") as f:
+            return json.load(f)
+    except Exception:
+        return {}
+
+def save_user_cache(cache: Dict[str, Dict[str, Any]]) -> None:
+    try:
+        with open(USER_CACHE_PATH, "w", encoding="utf-8") as f:
+            json.dump(cache, f, ensure_ascii=False, indent=2)
+    except Exception:
+        pass
+
+async def resolve_user_info(usernames: List[str]) -> Dict[str, Dict[str, Any]]:
+    """
+    Return mapping username -> { 'name': display_name, 'avatar': url }
+    Uses cache first; fetches from twitterapi.io if needed.
+    """
+    cache = load_user_cache()
+    result: Dict[str, Dict[str, Any]] = {}
+    to_fetch = []
+    # collect what we have
+    for u in usernames:
+        info = cache.get(u)
+        if info and isinstance(info, dict) and info.get("name"):
+            result[u] = info
+        else:
+            to_fetch.append(u)
+    if not to_fetch:
+        return result
+
+    headers = {"x-api-key": API_KEY} if API_KEY else {}
+    async with httpx.AsyncClient(timeout=15) as client:
+        for u in to_fetch:
+            try:
+                # common endpoint shape for user-by-username
+                url = f"{API_BASE}/twitter/user/by_username"
+                resp = await client.get(url, headers=headers, params={"username": u})
+                if resp.status_code == 200:
+                    data = resp.json() or {}
+                    # try multiple keys for name/avatar
+                    name = data.get("name") or data.get("display_name") or data.get("user", {}).get("name")
+                    avatar = data.get("profileImageUrl") or data.get("profile_image_url") or data.get("profile_image_url_https")
+                    if not avatar:
+                        avatar = f"https://unavatar.io/twitter/{u}"
+                    if name:
+                        cache[u] = {"name": name, "avatar": avatar}
+                        result[u] = cache[u]
+                        continue
+                # fallback
+                result[u] = {"name": u, "avatar": f"https://unavatar.io/twitter/{u}"}
+                cache[u] = result[u]
+            except Exception:
+                result[u] = {"name": u, "avatar": f"https://unavatar.io/twitter/{u}"}
+                cache[u] = result[u]
+    save_user_cache(cache)
+    return result
+
+
 # ---- Routes ----
 
 # Force a fresh Basic Auth prompt with unique realm to avoid cached creds
@@ -211,7 +275,16 @@ async def switch_user(credentials=Depends(security_optional), pm_switch_challeng
 async def index(request: Request, auth=Depends(require_any)):
     accounts = load_accounts()
     role = role_from_auth(auth)
-    return templates.TemplateResponse("index.html", {"request": request, "accounts": accounts, "title": APP_TITLE, "role": role})
+    accounts_info = []
+    try:
+        info_map = await resolve_user_info(accounts)
+        for u in accounts:
+            i = info_map.get(u, {"name": u, "avatar": f"https://unavatar.io/twitter/{u}"})
+            accounts_info.append({"username": u, "name": i.get("name") or u, "avatar": i.get("avatar")})
+    except Exception:
+        for u in accounts:
+            accounts_info.append({"username": u, "name": u, "avatar": f"https://unavatar.io/twitter/{u}"})
+    return templates.TemplateResponse("index.html", {"request": request, "accounts": accounts, "accounts_info": accounts_info, "title": APP_TITLE, "role": role})
 
 @app.post("/search", response_class=HTMLResponse)
 async def do_search(request: Request,
@@ -222,6 +295,7 @@ async def do_search(request: Request,
                     since_date: Optional[str] = Form(None),
                     until_date: Optional[str] = Form(None),
                     authors: List[str] = Form([]),
+                    pre_oct7: Optional[str] = Form(None),
                     auth=Depends(require_any)):
     accounts = load_accounts()
     use_accounts = accounts
@@ -229,6 +303,8 @@ async def do_search(request: Request,
         selected = [a for a in authors if a in accounts]
         if selected:
             use_accounts = selected
+    if pre_oct7:
+        until_date = "2023-10-07"
     query = build_query(phrase, use_accounts, since_date, until_date)
     try:
         pages = max(1, int((max_results or 20) // 20))
