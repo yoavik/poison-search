@@ -4,17 +4,17 @@
 <h2 class="page-title">חיפוש ביטוי/מילה</h2>
 <form method="post" action="/search" class="card elevate">
   <label>ביטוי לחיפוש (רצוי במרכאות):
-    <input type="text" name="phrase" placeholder='"דוגמה לביטוי"' required>
+    <input id="pm-phrase" type="text" name="phrase" placeholder='"דוגמה לביטוי"' required>
   </label>
   <div class="row">
     <label>מצב:
-      <select name="mode">
+      <select name="mode" id="pm-mode">
         <option value="Latest" selected>Latest</option>
         <option value="Top">Top</option>
       </select>
     </label>
     <label>מספר תוצאות מקסימלי:
-      <select name="max_results">
+      <select name="max_results" id="pm-max">
         <option value="20">20</option>
         <option value="40" selected>40</option>
         <option value="60">60</option>
@@ -25,13 +25,13 @@
   </div>
   <div class="row">
     <label>סינון לייקים מינימלי:
-      <input type="number" name="min_likes" value="0" min="0">
+      <input id="pm-minlikes" type="number" name="min_likes" value="0" min="0">
     </label>
     <label>מתאריך:
-      <input type="date" name="since_date">
+      <input id="pm-since" type="date" name="since_date">
     </label>
     <label>עד תאריך:
-      <input type="date" name="until_date">
+      <input id="pm-until" type="date" name="until_date">
     </label>
   </div>
 
@@ -52,7 +52,7 @@
           <div class="chk-grid" style="max-height:260px;overflow:auto;padding:.25rem 0">
             {% for a in accounts %}
             <label class="chk-item">
-              <input type="checkbox" name="authors" value="{{ a }}" onchange="pm_updateSummary()">
+              <input type="checkbox" name="authors" value="{{ a }}" onchange="pm_updateSummary();pm_storeAuthors();">
               <span>@{{ a }}</span>
             </label>
             {% endfor %}
@@ -82,22 +82,58 @@
   const panel = dd.querySelector('.dropdown-panel');
   function open() { panel.hidden = false; btn.setAttribute('aria-expanded','true'); }
   function close() { panel.hidden = true; btn.setAttribute('aria-expanded','false'); }
-  btn.addEventListener('click', (e)=>{
-    e.stopPropagation();
-    panel.hidden ? open() : close();
-  });
-  document.addEventListener('click', (e)=>{
-    if(!dd.contains(e.target)) close();
-  });
+  btn.addEventListener('click', (e)=>{ e.stopPropagation(); panel.hidden ? open() : close(); });
+  document.addEventListener('click', (e)=>{ if(!dd.contains(e.target)) close(); });
+
+  function getCbs(){ return Array.from(dd.querySelectorAll('input[name="authors"]')); }
+
   window.pm_selectAll = function(flag){
-    dd.querySelectorAll('input[name="authors"]').forEach(cb => cb.checked = !!flag);
+    getCbs().forEach(cb => cb.checked = !!flag);
     pm_updateSummary();
+    pm_storeAuthors();
   }
   window.pm_updateSummary = function(){
-    const cbs = Array.from(dd.querySelectorAll('input[name="authors"]'));
-    const selected = cbs.filter(cb => cb.checked).length;
+    const selected = getCbs().filter(cb => cb.checked).length;
     btn.textContent = selected ? `בחר משתמשים (${selected} נבחרו)` : 'בחר משתמשים (כולם)';
   }
+
+  // ---- Persistence (localStorage) ----
+  const LS_AUTHORS = 'pm-authors';
+  const LS_SINCE = 'pm-since';
+  const LS_UNTIL = 'pm-until';
+
+  window.pm_storeAuthors = function(){
+    const values = getCbs().filter(cb => cb.checked).map(cb => cb.value);
+    localStorage.setItem(LS_AUTHORS, JSON.stringify(values));
+  }
+  function restoreAuthors(){
+    try {
+      const raw = localStorage.getItem(LS_AUTHORS);
+      if(!raw) return;
+      const values = new Set(JSON.parse(raw));
+      getCbs().forEach(cb => { cb.checked = values.has(cb.value); });
+      pm_updateSummary();
+    } catch(e){ /* ignore */ }
+  }
+  function storeDate(id, key){
+    const el = document.getElementById(id);
+    el && el.addEventListener('change', ()=> localStorage.setItem(key, el.value||''));
+  }
+  function restoreDate(id, key){
+    const el = document.getElementById(id);
+    if(!el) return;
+    const v = localStorage.getItem(key);
+    if(v) el.value = v;
+  }
+
+  // init
+  document.addEventListener('DOMContentLoaded', ()=>{
+    restoreAuthors();
+    restoreDate('pm-since', LS_SINCE);
+    restoreDate('pm-until', LS_UNTIL);
+    storeDate('pm-since', LS_SINCE);
+    storeDate('pm-until', LS_UNTIL);
+  });
 })();
 </script>
 {% endblock %}
